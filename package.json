@@ -1,0 +1,17 @@
+{
+  "name": "com.spaxtek.ble",
+  "version": "0.1.0",
+  "displayName": "Spaxtek BLE",
+  "description": "Reusable Bluetooth Low Energy client abstraction for Unity on Android and Windows.",
+  "unity": "6000.0",
+  "author": {
+    "name": "Spaxtek"
+  },
+  "samples": [
+    {
+      "displayName": "BLE Diagnostics",
+      "description": "A minimal runtime diagnostics component for initializing, scanning, and observing BLE events.",
+      "path": "Samples~/BleDiagnostics"
+    }
+  ]
+}

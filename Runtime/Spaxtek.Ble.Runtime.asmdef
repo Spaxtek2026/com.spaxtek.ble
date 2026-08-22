@@ -1,0 +1,16 @@
+{
+  "name": "Spaxtek.Ble.Runtime",
+  "rootNamespace": "Spaxtek.Ble",
+  "references": [
+    "Spaxtek.Ble.Core"
+  ],
+  "includePlatforms": [],
+  "excludePlatforms": [],
+  "allowUnsafeCode": false,
+  "overrideReferences": false,
+  "precompiledReferences": [],
+  "autoReferenced": true,
+  "defineConstraints": [],
+  "versionDefines": [],
+  "noEngineReferences": false
+}

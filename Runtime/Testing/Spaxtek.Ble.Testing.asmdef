@@ -1,0 +1,16 @@
+{
+  "name": "Spaxtek.Ble.Testing",
+  "rootNamespace": "Spaxtek.Ble.Testing",
+  "references": [
+    "Spaxtek.Ble.Core"
+  ],
+  "includePlatforms": [],
+  "excludePlatforms": [],
+  "allowUnsafeCode": false,
+  "overrideReferences": false,
+  "precompiledReferences": [],
+  "autoReferenced": true,
+  "defineConstraints": [],
+  "versionDefines": [],
+  "noEngineReferences": true
+}

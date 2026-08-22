@@ -1,0 +1,25 @@
+{
+  "name": "Spaxtek.Ble.Tests",
+  "rootNamespace": "Spaxtek.Ble.Tests",
+  "references": [
+    "Spaxtek.Ble.Core",
+    "Spaxtek.Ble.Runtime",
+    "Spaxtek.Ble.Testing"
+  ],
+  "includePlatforms": [
+    "Editor"
+  ],
+  "excludePlatforms": [],
+  "allowUnsafeCode": false,
+  "overrideReferences": false,
+  "precompiledReferences": [],
+  "autoReferenced": false,
+  "defineConstraints": [
+    "UNITY_INCLUDE_TESTS"
+  ],
+  "versionDefines": [],
+  "noEngineReferences": false,
+  "optionalUnityReferences": [
+    "TestAssemblies"
+  ]
+}
