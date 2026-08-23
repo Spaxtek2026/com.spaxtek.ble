@@ -957,6 +957,10 @@ namespace
 
         static std::wstring CreateCharacteristicKey(std::wstring serviceUuid, std::wstring characteristicUuid)
         {
+            if (serviceUuid.size() >= 2 && serviceUuid.front() == L'{' && serviceUuid.back() == L'}')
+                serviceUuid = serviceUuid.substr(1, serviceUuid.size() - 2);
+            if (characteristicUuid.size() >= 2 && characteristicUuid.front() == L'{' && characteristicUuid.back() == L'}')
+                characteristicUuid = characteristicUuid.substr(1, characteristicUuid.size() - 2);
             std::transform(serviceUuid.begin(), serviceUuid.end(), serviceUuid.begin(), ::towlower);
             std::transform(characteristicUuid.begin(), characteristicUuid.end(), characteristicUuid.begin(), ::towlower);
             return serviceUuid + L"/" + characteristicUuid;

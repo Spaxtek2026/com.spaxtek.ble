@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.1.1
+
+- Fixed Windows GATT characteristic lookup when discovered UUIDs include braces but managed operation UUIDs do not.
+
 ## 0.1.0
 
 - Added protocol-agnostic BLE adapter and connection abstractions.

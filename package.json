@@ -1,6 +1,6 @@
 {
   "name": "com.spaxtek.ble",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "displayName": "Spaxtek BLE",
   "description": "Reusable Bluetooth Low Energy client abstraction for Unity on Android and Windows.",
   "unity": "6000.0",
