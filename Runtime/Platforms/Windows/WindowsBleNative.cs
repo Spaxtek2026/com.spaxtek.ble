@@ -1,7 +1,6 @@
 #if UNITY_EDITOR_WIN || (UNITY_STANDALONE_WIN && !UNITY_ANDROID)
 using System;
 using System.Runtime.InteropServices;
-using System.Text;
 
 namespace Spaxtek.Ble.Platforms.Windows
 {
@@ -43,8 +42,9 @@ namespace Spaxtek.Ble.Platforms.Windows
         public static extern int spax_ble_write(IntPtr handle, long operationId, string serviceUuid, string characteristicUuid, byte[] data, int dataLength, int writeMode);
 
         [DllImport(LibraryName, CallingConvention = CallingConvention.Cdecl, CharSet = CharSet.Unicode, ExactSpelling = true)]
-        public static extern int spax_ble_poll_event(IntPtr handle, ref NativeEventHeader header, StringBuilder textA, int textACapacity,
-            StringBuilder textB, int textBCapacity, StringBuilder textC, int textCCapacity, byte[] data, int dataCapacity);
+        public static extern int spax_ble_poll_event(IntPtr handle, ref NativeEventHeader header, [Out, MarshalAs(UnmanagedType.LPArray, ArraySubType = UnmanagedType.U2, SizeParamIndex = 3)] char[] textA, int textACapacity,
+            [Out, MarshalAs(UnmanagedType.LPArray, ArraySubType = UnmanagedType.U2, SizeParamIndex = 5)] char[] textB, int textBCapacity,
+            [Out, MarshalAs(UnmanagedType.LPArray, ArraySubType = UnmanagedType.U2, SizeParamIndex = 7)] char[] textC, int textCCapacity, [Out] byte[] data, int dataCapacity);
 
         [StructLayout(LayoutKind.Sequential)]
         public struct NativeEventHeader

@@ -1,7 +1,6 @@
 #if UNITY_EDITOR_WIN || (UNITY_STANDALONE_WIN && !UNITY_ANDROID)
 using System;
 using System.Collections.Generic;
-using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using Spaxtek.Ble.Core;
@@ -24,9 +23,9 @@ namespace Spaxtek.Ble.Platforms.Windows
         private const int TextCapacity = 1024;
         private const int DataCapacity = 65536;
 
-        private readonly StringBuilder _textA = new StringBuilder(TextCapacity);
-        private readonly StringBuilder _textB = new StringBuilder(TextCapacity);
-        private readonly StringBuilder _textC = new StringBuilder(TextCapacity);
+        private readonly char[] _textA = new char[TextCapacity];
+        private readonly char[] _textB = new char[TextCapacity];
+        private readonly char[] _textC = new char[TextCapacity];
         private readonly byte[] _eventData = new byte[DataCapacity];
         private IntPtr _handle;
         private TaskCompletionSource<bool> _initializeCompletion;
@@ -139,6 +138,13 @@ namespace Spaxtek.Ble.Platforms.Windows
             return await _connectCompletion.Task;
         }
 
+        // Fixed UTF-16 arrays keep the native capacity independent of IL2CPP StringBuilder marshalling.
+        private static string ReadText(char[] buffer)
+        {
+            int length = Array.IndexOf(buffer, '\0');
+            return new string(buffer, 0, length < 0 ? buffer.Length : length);
+        }
+
         public void PumpEvents(int maximumEventCount)
         {
             if (_disposed || _handle == IntPtr.Zero || maximumEventCount <= 0)
@@ -147,9 +153,9 @@ namespace Spaxtek.Ble.Platforms.Windows
             for (int index = 0; index < maximumEventCount; index++)
             {
                 WindowsBleNative.NativeEventHeader header = default;
-                _textA.Clear();
-                _textB.Clear();
-                _textC.Clear();
+                _textA[0] = '\0';
+                _textB[0] = '\0';
+                _textC[0] = '\0';
                 int result = WindowsBleNative.spax_ble_poll_event(_handle, ref header, _textA, TextCapacity, _textB, TextCapacity, _textC, TextCapacity, _eventData, DataCapacity);
                 if (result == 0)
                     return;
@@ -159,7 +165,7 @@ namespace Spaxtek.Ble.Platforms.Windows
                     return;
                 }
 
-                ProcessNativeEvent(header, _textA.ToString(), _textB.ToString(), _textC.ToString());
+                ProcessNativeEvent(header, ReadText(_textA), ReadText(_textB), ReadText(_textC));
             }
         }
 
