@@ -34,7 +34,7 @@ Windows support currently targets Windows 10/11 x64 Standalone and the Windows x
 
 ## Updating
 
-`0.1.x` patch releases preserve the public managed API, assembly names, Unity asset GUIDs, and Windows native entry points. Updating from `0.1.0` or `0.1.1` to `0.1.2` does not require application code changes. Projects that reference a Git tag only need to change the package revision to `v0.1.2` and let Unity refresh the package; restart the Editor if Windows still has the previous native DLL loaded.
+`0.1.x` patch releases preserve the public managed API, assembly names, Unity asset GUIDs, and Windows native entry points. Updating between `0.1.x` versions does not require application code changes. Projects that reference a Git tag only need to change the package revision to `v0.1.4` and let Unity refresh the package; restart the Editor if Windows still has the previous native DLL loaded.
 
 ## Scope
 
