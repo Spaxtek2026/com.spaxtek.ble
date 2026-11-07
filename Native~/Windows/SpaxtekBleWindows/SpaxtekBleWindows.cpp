@@ -129,11 +129,32 @@ namespace
 
             std::promise<void> cleanupPromise;
             std::future<void> cleanupFuture = cleanupPromise.get_future();
-            if (Post([this, &cleanupPromise]() {
-                Cleanup();
-                cleanupPromise.set_value();
-            }))
+            bool cleanupQueued = false;
+            {
+                std::lock_guard<std::mutex> commandLock(m_commandMutex);
+                if (!m_stopRequested)
+                {
+                    // Queue cleanup after all accepted commands, then reject any new work.
+                    // This prevents a command from starting another coroutine behind Cleanup.
+                    m_acceptCommands = false;
+                    m_commands.push_back([this, &cleanupPromise]() {
+                        try
+                        {
+                            Cleanup();
+                        }
+                        catch (...)
+                        {
+                        }
+                        cleanupPromise.set_value();
+                    });
+                    cleanupQueued = true;
+                }
+            }
+            if (cleanupQueued)
+            {
+                m_commandAvailable.notify_one();
                 cleanupFuture.wait();
+            }
 
             {
                 std::lock_guard<std::mutex> commandLock(m_commandMutex);
@@ -151,7 +172,7 @@ namespace
 
             {
                 std::lock_guard<std::mutex> commandLock(m_commandMutex);
-                if (m_stopRequested)
+                if (!m_acceptCommands || m_stopRequested)
                     return false;
                 m_commands.push_back(std::move(command));
             }
@@ -278,6 +299,8 @@ namespace
 
         fire_and_forget InitializeAsync()
         {
+            auto lifetime = shared_from_this();
+            std::unique_lock<OperationGate> operationLock(m_operationGate);
             NativeEvent output = CreateEvent(nativeEventInitialized);
             try
             {
@@ -417,6 +440,7 @@ namespace
 
         fire_and_forget ConnectAsync(std::wstring deviceId)
         {
+            auto lifetime = shared_from_this();
             std::unique_lock<OperationGate> operationLock(m_operationGate);
             try
             {
@@ -492,7 +516,15 @@ namespace
             m_characteristics.clear();
 
             for (GattDeviceService const& service : m_services)
-                service.Close();
+            {
+                try
+                {
+                    service.Close();
+                }
+                catch (...)
+                {
+                }
+            }
             m_services.clear();
 
             if (m_device)
@@ -520,6 +552,7 @@ namespace
 
         fire_and_forget DiscoverServicesAsync(std::int64_t operationId, bool uncached)
         {
+            auto lifetime = shared_from_this();
             std::unique_lock<OperationGate> operationLock(m_operationGate);
             NativeEvent completion = CreateOperationEvent(nativeEventDiscoveryComplete, operationId);
             try
@@ -543,11 +576,14 @@ namespace
                     co_return;
                 }
 
-                std::lock_guard<std::mutex> stateLock(m_stateMutex);
-                ClearGattCache();
+                // Never keep a thread-affine std::mutex locked across co_await. Build a
+                // complete replacement cache locally, then publish it under a short lock.
+                std::vector<GattDeviceService> discoveredServices;
+                std::map<std::wstring, CharacteristicEntry> discoveredCharacteristics;
+                std::vector<NativeEvent> discoveredEvents;
                 for (GattDeviceService const& service : serviceResult.Services())
                 {
-                    m_services.push_back(service);
+                    discoveredServices.push_back(service);
                     GattCharacteristicsResult characteristicResult = co_await service.GetCharacteristicsAsync(cacheMode);
                     if (characteristicResult.Status() != GattCommunicationStatus::Success)
                         continue;
@@ -559,15 +595,24 @@ namespace
                         std::wstring key = CreateCharacteristicKey(serviceUuid, characteristicUuid);
                         CharacteristicEntry entry;
                         entry.characteristic = characteristic;
-                        m_characteristics.insert_or_assign(key, entry);
+                        discoveredCharacteristics.insert_or_assign(key, std::move(entry));
 
                         NativeEvent discovered = CreateEvent(nativeEventCharacteristicDiscovered, true);
                         discovered.textA = serviceUuid;
                         discovered.textB = characteristicUuid;
                         discovered.header.valueA = ToUnityProperties(characteristic.CharacteristicProperties());
-                        Push(std::move(discovered));
+                        discoveredEvents.push_back(std::move(discovered));
                     }
                 }
+
+                {
+                    std::lock_guard<std::mutex> stateLock(m_stateMutex);
+                    ClearGattCache();
+                    m_services = std::move(discoveredServices);
+                    m_characteristics = std::move(discoveredCharacteristics);
+                }
+                for (NativeEvent& discovered : discoveredEvents)
+                    Push(std::move(discovered));
 
                 completion.header.success = 1;
                 completion.textA = L"Windows GATT discovery completed.";
@@ -599,6 +644,7 @@ namespace
 
         fire_and_forget SetSubscriptionAsync(std::int64_t operationId, std::wstring serviceUuid, std::wstring characteristicUuid, bool enabled)
         {
+            auto lifetime = shared_from_this();
             std::unique_lock<OperationGate> operationLock(m_operationGate);
             NativeEvent completion = CreateOperationEvent(nativeEventOperationComplete, operationId);
             try
@@ -685,6 +731,7 @@ namespace
 
         fire_and_forget ReadAsync(std::int64_t operationId, std::wstring serviceUuid, std::wstring characteristicUuid)
         {
+            auto lifetime = shared_from_this();
             std::unique_lock<OperationGate> operationLock(m_operationGate);
             NativeEvent completion = CreateOperationEvent(nativeEventOperationComplete, operationId);
             try
@@ -749,6 +796,7 @@ namespace
 
         fire_and_forget WriteAsync(std::int64_t operationId, std::wstring serviceUuid, std::wstring characteristicUuid, std::vector<std::uint8_t> data, std::int32_t writeMode)
         {
+            auto lifetime = shared_from_this();
             std::unique_lock<OperationGate> operationLock(m_operationGate);
             NativeEvent completion = CreateOperationEvent(nativeEventOperationComplete, operationId);
             try
@@ -878,11 +926,27 @@ namespace
             {
                 CharacteristicEntry& entry = pair.second;
                 if (entry.subscribed && entry.characteristic)
-                    entry.characteristic.ValueChanged(entry.valueChangedToken);
+                {
+                    try
+                    {
+                        entry.characteristic.ValueChanged(entry.valueChangedToken);
+                    }
+                    catch (...)
+                    {
+                    }
+                }
             }
             m_characteristics.clear();
             for (GattDeviceService const& service : m_services)
-                service.Close();
+            {
+                try
+                {
+                    service.Close();
+                }
+                catch (...)
+                {
+                }
+            }
             m_services.clear();
         }
 
@@ -1039,6 +1103,7 @@ namespace
         std::mutex m_commandMutex;
         std::condition_variable m_commandAvailable;
         std::deque<std::function<void()>> m_commands;
+        bool m_acceptCommands = true;
         bool m_stopRequested = false;
         bool m_stopped = false;
         bool m_workerReady = false;

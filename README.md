@@ -32,6 +32,10 @@ The ready-to-use x64 DLL is included under `Runtime/Plugins/Windows/x86_64`. Its
 
 Windows support currently targets Windows 10/11 x64 Standalone and the Windows x64 Unity Editor.
 
+## Updating
+
+`0.1.x` patch releases preserve the public managed API, assembly names, Unity asset GUIDs, and Windows native entry points. Updating from `0.1.0` or `0.1.1` to `0.1.2` does not require application code changes. Projects that reference a Git tag only need to change the package revision to `v0.1.2` and let Unity refresh the package; restart the Editor if Windows still has the previous native DLL loaded.
+
 ## Scope
 
 Connection retry, application packet framing, ACK policies, MTU-aware payload fragmentation, and device-specific protocols intentionally remain above this package. They vary by product and can be layered over `IBleConnection` without changing either platform backend.
